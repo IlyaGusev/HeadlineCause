@@ -1,0 +1,12 @@
+{
+	"result": {
+		"type": "string",
+		"allowed_values": [
+			"left_right_cause",
+			"right_left_cause",
+			"rel",
+			"bad"
+		],
+		"required": false
+	}
+}

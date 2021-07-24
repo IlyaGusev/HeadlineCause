@@ -1,0 +1,22 @@
+{
+	"left_title": {
+		"type": "string",
+		"required": true
+	},
+	"right_title": {
+		"type": "string",
+		"required": true
+	},
+	"id": {
+		"type": "string",
+		"required": false
+	},
+	"left_url": {
+		"type": "string",
+		"required": false
+	},
+	"right_url": {
+		"type": "string",
+		"required": false
+	}
+}

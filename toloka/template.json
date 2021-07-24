@@ -1,0 +1,97 @@
+{
+  "view": {
+    "type": "layout.side-by-side",
+    "items": [
+      {
+        "type": "view.text",
+        "content": {
+          "type": "data.input",
+          "path": "left_title"
+        }
+      },
+      {
+        "type": "view.text",
+        "content": {
+          "type": "data.input",
+          "path": "right_title"
+        }
+      }
+    ],
+    "controls": {
+      "type": "field.radio-group",
+      "options": [
+        {
+          "label": "Правый отменяет левый",
+          "value": "left_right_cause"
+        },
+        {
+          "label": "Левый отменяет правый",
+          "value": "right_left_cause"
+        },
+        {
+          "label": "Другая связь",
+          "value": "rel"
+        },
+        {
+          "label": "Нет связи",
+          "value": "bad"
+        }
+      ],
+      "data": {
+        "type": "data.output",
+        "path": "result"
+      }
+    },
+    "validation": {
+      "type": "condition.required",
+      "data": {
+        "type": "data.output",
+        "path": "result"
+      }
+    }
+  },
+  "plugins": [
+    {
+      "type": "plugin.toloka",
+      "layout": {
+        "kind": "scroll",
+        "taskWidth": 1000
+      }
+    },
+    {
+      "1": {
+        "type": "action.set",
+        "data": {
+          "type": "data.output",
+          "path": "result"
+        },
+        "payload": "left_right_cause"
+      },
+      "2": {
+        "type": "action.set",
+        "data": {
+          "type": "data.output",
+          "path": "result"
+        },
+        "payload": "right_left_cause"
+      },
+      "3": {
+        "type": "action.set",
+        "data": {
+          "type": "data.output",
+          "path": "result"
+        },
+        "payload": "rel"
+      },
+      "4": {
+        "type": "action.set",
+        "data": {
+          "type": "data.output",
+          "path": "result"
+        },
+        "payload": "bad"
+      },
+      "type": "plugin.hotkeys"
+    }
+  ]
+}
