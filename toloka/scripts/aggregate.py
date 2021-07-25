@@ -27,6 +27,8 @@ def aggregate(records, border):
             data.pop(key)
     for confidence, sample_count in sorted(confidence_distribution.items(), reverse=True):
         print("{}: {}".format(confidence, sample_count))
+    data = list(data.values())
+    data.sort(key=lambda x : x["confidence"], reverse=True)
     return data
 
 
@@ -72,7 +74,7 @@ def main(border, token, output, pools_file):
         header = ["left_title", "right_title", "result", "confidence", "id", "left_url", "right_url"]
         writer = csv.writer(w, delimiter="\t", quotechar='"')
         writer.writerow(header)
-        for _, r in agg_records.items():
+        for r in agg_records:
             row = [r[key] for key in header]
             writer.writerow(row)
 
