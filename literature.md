@@ -48,4 +48,21 @@
 - 0 CS citations
 - Про кластеризацию заголовков
 
+#### Constructing and Embedding Abstract Event Causality Networks from Text Snippets
+- 2017
+- http://ir.hit.edu.cn/~sdzhao/CausalEmbedding.pdf
+- 53 CS citations
+- Майнят из текстов причинные связки "... because of ...", учат на них что-то типа word2vec, получают пространство эмбеддингов про каузальность
+
+#### News Event Prediction using Causality Approach on South China Sea Conflict
+- 2021
+- https://ieeexplore.ieee.org/document/9392431
+- 0 CS citations
+- Майнят из новостей связки событий в военном конфликте, учатся на них предсказывать следующие события
+
+#### Assessing Causality Structures learned from Digital Text Media
+- 2020
+- https://www.researchgate.net/profile/Fernando-Delbianco/publication/345678215_Assessing_Causality_Structures_learned_from_Digital_Text_Media/links/5faa98ab299bf15bae063628/Assessing-Causality-Structures-learned-from-Digital-Text-Media.pdf
+- 0 CS citations
+- На разметке учат RNN выделять из потока новостей события, потом кластеризуют события по BERT-эмбеддингам, потом применяют всякие статистические тесты на каузальность (типа  Granger causality), чтобы понять, какие паттерны какой тест вытаскивает.
 
