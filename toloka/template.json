@@ -21,11 +21,23 @@
       "type": "field.radio-group",
       "options": [
         {
+          "label": "Про одно и то же",
+          "value": "same"
+        },
+        {
           "label": "Правый отменяет левый",
-          "value": "left_right_cause"
+          "value": "left_right_cancel"
         },
         {
           "label": "Левый отменяет правый",
+          "value": "right_left_cancel"
+        },
+        {
+          "label": "Из левого следует правый",
+          "value": "left_right_cause"
+        },
+        {
+          "label": "Из правого следует левый",
           "value": "right_left_cause"
         },
         {
@@ -65,7 +77,7 @@
           "type": "data.output",
           "path": "result"
         },
-        "payload": "left_right_cause"
+        "payload": "same"
       },
       "2": {
         "type": "action.set",
@@ -73,7 +85,7 @@
           "type": "data.output",
           "path": "result"
         },
-        "payload": "right_left_cause"
+        "payload": "left_right_cancel"
       },
       "3": {
         "type": "action.set",
@@ -81,9 +93,33 @@
           "type": "data.output",
           "path": "result"
         },
-        "payload": "rel"
+        "payload": "right_left_cancel"
       },
       "4": {
+        "type": "action.set",
+        "data": {
+          "type": "data.output",
+          "path": "result"
+        },
+        "payload": "left_right_cause"
+      },
+      "5": {
+        "type": "action.set",
+        "data": {
+          "type": "data.output",
+          "path": "result"
+        },
+        "payload": "right_left_cause"
+      },
+      "6": {
+        "type": "action.set",
+        "data": {
+          "type": "data.output",
+          "path": "result"
+        },
+        "payload": "rel"
+      },
+      "7": {
         "type": "action.set",
         "data": {
           "type": "data.output",
