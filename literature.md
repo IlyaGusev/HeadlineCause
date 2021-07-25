@@ -43,8 +43,8 @@
 - Совсем другая постановка задачи: оцениваем заголовки против claim'а: for, against или observing
 
 #### News Headline Grouping as a Challenging NLU Task:
-- https://arxiv.org/abs/2105.05391
 - 2021
+- https://arxiv.org/abs/2105.05391
 - 0 CS citations
 - Про кластеризацию заголовков
 
