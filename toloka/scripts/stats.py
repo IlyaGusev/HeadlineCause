@@ -38,12 +38,14 @@ def main(aggregated_path, raw_path, border):
     print("RESULT, border {}:".format(border))
     for result, count in sorted(result_distribution.items()):
         print("{}\t{}".format(count, result))
+    print("{}\t{}".format(sum(result_distribution.values()), "all"))
     print()
 
     print("WORKERS:")
     print("count\t{}".format(len(worker_distribution)))
     print("avg\t{}".format(sum(worker_distribution.values()) / len(worker_distribution)))
     print("max\t{}".format(max(worker_distribution.values())))
+    print()
 
 
 if __name__ == "__main__":
