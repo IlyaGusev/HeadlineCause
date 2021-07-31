@@ -16,3 +16,6 @@ altsoph:
 - Unsupervised GPT для определения направления следствия (DirectionTask)
 - ~~Найти навык английских толокеров~~ https://toloka.yandex.com/requester/quality/skill/23048 / en_gramm_native
 - Статистика по используемым парам глаголов
+
+backlog:
+- Правда ли, что там где модель ошибается, согласованность толокеров тоже ниже
