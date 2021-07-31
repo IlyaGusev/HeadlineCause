@@ -10,8 +10,6 @@ with open(sys.argv[1], "r") as r:
         r = dict(zip(header, row))
         has_lenta_link = int(r.pop("has_lenta_link")) == 1
         has_cluster_link = int(r.pop("has_cluster_link")) == 1
-        if not has_lenta_link:
-            continue
         if random.random() < 0.5:
             r["left_title"], r["right_title"] = r.pop("second_title"), r.pop("first_title")
             r["left_url"], r["right_url"] = r.pop("second_url"), r.pop("first_url")

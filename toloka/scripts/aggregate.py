@@ -28,7 +28,7 @@ def aggregate(records, border, res_key):
     for confidence, sample_count in sorted(confidence_distribution.items(), reverse=True):
         print("{}: {}".format(confidence, sample_count))
     data = list(data.values())
-    data.sort(key=lambda x : (x["confidence"], int(x["id"])), reverse=True)
+    data.sort(key=lambda x : (x["confidence"], str(x["id"])), reverse=True)
     return data
 
 

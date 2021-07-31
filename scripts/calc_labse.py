@@ -49,4 +49,5 @@ def main(input_path, output_path):
         for embedding in embeddings:
             w.write(json.dumps(embedding.tolist()) + "\n")
 
-main("input.txt", "output.txt")
+if __name__ == "__main__":
+    main(sys.argv[1], sys.argv[2])
