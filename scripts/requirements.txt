@@ -1,0 +1,4 @@
+tensorflow
+tensorflow-text
+tensorflow-hub
+transformers
