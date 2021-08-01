@@ -1,0 +1,15 @@
+{
+	"result": {
+		"type": "string",
+		"allowed_values": [
+			"same",
+			"left_right_cancel",
+			"right_left_cancel",
+			"left_right_cause",
+			"right_left_cause",
+			"rel",
+			"bad"
+		],
+		"required": false
+	}
+}
