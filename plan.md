@@ -13,7 +13,7 @@ ilya-gusev:
 
 altsoph:
 - ~~Обучение берта для детекции отмен среди следствий (CancelTask)~~
-- Unsupervised GPT для определения направления следствия (UnsupervisedDirectionTask)
+- ~~Unsupervised GPT для определения направления следствия (UnsupervisedDirectionTask)~~
 - ~~Найти навык английских толокеров~~ https://toloka.yandex.com/requester/quality/skill/23048 / en_gramm_native
 - Статистика по используемым парам глаголов
 
