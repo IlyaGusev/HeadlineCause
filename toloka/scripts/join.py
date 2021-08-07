@@ -16,45 +16,28 @@ def read_tsv(file_name):
     return records
 
 
-def get_date(url):
-    dates = re.findall(r"\d\d\d\d\/\d\d\/\d\d", url)
-    date = str(next(iter(dates), None))
-    return int(datetime.strptime(date, "%Y/%m/%d").timestamp())
-
-
-def main(markup, output, tg_data, lenta_data):
+def main(markup, docs, output, min_votes_part, min_confidence):
     records = read_tsv(markup)
-    tg_records = {r["id"]: r for r in read_tsv(tg_data)}
-    lenta_records = {r["id"]: r for r in read_tsv(lenta_data)}
+    docs = {r["url"]: r for r in read_tsv(docs)}
     fixed_records = []
     for r in records:
         rid = r["id"]
-        if rid not in tg_records and rid not in lenta_records:
-            print("Record not found: {}".format(rid))
-            continue
         r["confidence"] = float(r["confidence"])
-        if r["confidence"] < 0.69:
+        if r["confidence"] < min_confidence:
             continue
-        is_tg = rid in tg_records
-        orig_r = tg_records[rid] if is_tg else lenta_records[rid]
-
-        is_inverted = orig_r["left_url"] == r["right_url"]
-        if is_inverted:
-            assert orig_r["left_url"] == r["right_url"]
-            assert orig_r["right_url"] == r["left_url"]
-        else:
-            assert orig_r["left_url"] == r["left_url"]
-            assert orig_r["right_url"] == r["right_url"]
-        if is_tg:
-            left_timestamp = orig_r["left_timestamp"]
-            right_timestamp = orig_r["right_timestamp"]
-        else:
-            left_timestamp = get_date(orig_r["left_url"])
-            right_timestamp = get_date(orig_r["right_url"])
-        r["left_timestamp"] = right_timestamp if is_inverted else left_timestamp
-        r["right_timestamp"] = left_timestamp if is_inverted else right_timestamp
-
-        if not is_tg:
+        if float(r["mv_part"]) < min_votes_part:
+            continue
+        if r.pop("mv_result") != r["result"]:
+            continue
+        if r["left_url"] not in docs:
+            print("Bad url: {}".format(r["left_url"]))
+            continue
+        if r["right_url"] not in docs:
+            print("Bad url: {}".format(r["right_url"]))
+            continue
+        r["left_timestamp"] = docs[r["left_url"]]["timestamp"]
+        r["right_timestamp"] = docs[r["right_url"]]["timestamp"]
+        if "_" not in r["id"] or "single" in r["id"]:
             r["id"] = "lenta_" + r["id"]
 
         if r["result"].startswith("left_right") and r["left_timestamp"] > r["right_timestamp"]:
@@ -72,7 +55,7 @@ def main(markup, output, tg_data, lenta_data):
             "id", "left_title", "right_title",
             "left_url", "right_url", "left_timestamp",
             "right_timestamp", "confidence", "result",
-            "overlap"
+            "overlap","mv_part"
         )
         writer.writerow(header)
         for r in fixed_records:
@@ -83,7 +66,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--markup", type=str, required=True)
     parser.add_argument("--output", type=str, required=True)
-    parser.add_argument("--tg-data", type=str, required=True)
-    parser.add_argument("--lenta-data", type=str, required=True)
+    parser.add_argument("--docs", type=str, required=True)
+    parser.add_argument("--min-votes-part", type=float, default=0.7)
+    parser.add_argument("--min-confidence", type=float, default=0.99)
     args = parser.parse_args()
     main(**vars(args))

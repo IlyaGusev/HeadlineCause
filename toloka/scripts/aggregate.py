@@ -3,6 +3,8 @@ import os
 import csv
 from collections import defaultdict, Counter
 
+import pandas as pd
+from crowdkit.aggregation import DawidSkene
 import toloka.client as toloka
 
 
@@ -13,20 +15,43 @@ def aggregate(records, border, res_key):
 
     data = {r["id"]: r for r in records}
     confidence_distribution = Counter()
+    votes_distribution = Counter()
     for key, res in results.items():
         res_count = Counter(res)
         overlap = len(res)
         res_win, votes_win = res_count.most_common(1)[0]
-        confidence = float(votes_win) / overlap
-        confidence_distribution[confidence] += 1
-        if confidence >= border:
-            data[key]["confidence"] = confidence
-            data[key]["overlap"] = overlap
-            data[key][res_key] = res_win
-        else:
-            data.pop(key)
+        votes_part = float(votes_win) / overlap
+        votes_distribution[votes_part] += 1
+        data[key].update({
+            "mv_{}".format(res_key): res_win,
+            "mv_part": votes_part,
+            "overlap": overlap
+        })
+
+    answers = [(r["id"], r[res_key], r["worker_id"]) for r in records]
+    answers_df = pd.DataFrame(answers, columns=["task", "label", "performer"])
+    proba = DawidSkene(n_iter=20).fit_predict_proba(answers_df)
+    labels = proba.idxmax(axis=1)
+    index = list(proba.index)
+    for key in index:
+        label = labels[key]
+        confidence = proba.loc[key, label]
+        confidence_distribution[float(int(confidence * 10) / 10)] += 1
+        data[key].update({
+            res_key: label,
+            "confidence": confidence
+        })
+
+    print("Dawid-Skene: ")
     for confidence, sample_count in sorted(confidence_distribution.items(), reverse=True):
         print("{}: {}".format(confidence, sample_count))
+
+    print()
+    print("Majority vote: ")
+    for votes, sample_count in sorted(votes_distribution.items(), reverse=True):
+        print("{}: {}".format(votes, sample_count))
+
+    data = {key: r for key, r in data.items() if r["confidence"] >= border}
     data = list(data.values())
     data.sort(key=lambda x : (x["confidence"], str(x["id"])), reverse=True)
     return data
@@ -49,7 +74,7 @@ def main(
     pools_file,
     key_field,
     res_field,
-    input_fields
+    input_fields,
 ):
     input_fields = input_fields.split(",")
 
@@ -89,7 +114,9 @@ def main(
                 records.append(record)
 
     agg_records = aggregate(records, border, res_field)
-    agg_header = [key_field, res_field, "confidence", "overlap"] + input_fields
+    agg_header = []
+    agg_header += input_fields
+    agg_header += [key_field, res_field, "confidence", "overlap", "mv_part", "mv_" + res_field]
     write_tsv(agg_records, agg_header, agg_output)
 
     raw_records = records

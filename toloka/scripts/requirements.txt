@@ -1,1 +1,2 @@
 toloka-kit==0.1.10
+crowd-kit==0.0.5

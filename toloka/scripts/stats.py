@@ -14,8 +14,8 @@ def read_tsv(path):
     return records
 
 
-def main(aggregated_path, raw_path, border):
-    confidence_distribution = Counter()
+def main(aggregated_path, raw_path, min_confidence, min_votes_part):
+    votes_distribution = Counter()
     result_distribution = Counter()
     worker_distribution = Counter()
 
@@ -23,19 +23,21 @@ def main(aggregated_path, raw_path, border):
     raw_records = read_tsv(raw_path)
 
     for r in agg_records:
-        confidence_distribution[r["confidence"]] += 1
-        if float(r["confidence"]) >= border:
+        votes_distribution[r["mv_part"]] += 1
+        confidence_is_ok = float(r["confidence"]) >= min_confidence
+        mv_part_is_ok = float(r["mv_part"]) >= min_votes_part
+        if confidence_is_ok and mv_part_is_ok:
             result_distribution[r["result"]] += 1
 
     for r in raw_records:
         worker_distribution[r["worker_id"]] += 1
 
-    print("CONFIDENCE:")
-    for confidence, count in sorted(confidence_distribution.items(), reverse=True):
-        print("{}\t{}".format(confidence, count))
+    print("MV PART:")
+    for votes, count in sorted(votes_distribution.items(), reverse=True):
+        print("{}\t{}".format(votes, count))
     print()
 
-    print("RESULT, border {}:".format(border))
+    print("RESULT, min confidence {}:, min mv part: {}".format(min_confidence, min_votes_part))
     for result, count in sorted(result_distribution.items()):
         print("{}\t{}".format(count, result))
     print("{}\t{}".format(sum(result_distribution.values()), "all"))
@@ -52,6 +54,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("aggregated_path", type=str)
     parser.add_argument("raw_path", type=str)
-    parser.add_argument("--border", type=float, default=0.8)
+    parser.add_argument("--min-votes-part", type=float, default=0.7)
+    parser.add_argument("--min-confidence", type=float, default=0.99)
     args = parser.parse_args()
     main(**vars(args))
