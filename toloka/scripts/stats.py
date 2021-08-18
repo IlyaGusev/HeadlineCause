@@ -23,11 +23,11 @@ def main(aggregated_path, raw_path, min_confidence, min_votes_part):
     raw_records = read_tsv(raw_path)
 
     for r in agg_records:
-        votes_distribution[r["mv_part"]] += 1
-        confidence_is_ok = float(r["confidence"]) >= min_confidence
-        mv_part_is_ok = float(r["mv_part"]) >= min_votes_part
+        votes_distribution[r["mv_part_result_cause"]] += 1
+        confidence_is_ok = float(r["ds_confidence_result_cause"]) >= min_confidence
+        mv_part_is_ok = float(r["mv_part_result_cause"]) >= min_votes_part
         if confidence_is_ok and mv_part_is_ok:
-            result_distribution[r["result"]] += 1
+            result_distribution[r["mv_result_cause"]] += 1
 
     for r in raw_records:
         worker_distribution[r["worker_id"]] += 1

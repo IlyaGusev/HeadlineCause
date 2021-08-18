@@ -8,7 +8,7 @@ from crowdkit.aggregation import DawidSkene
 import toloka.client as toloka
 
 
-def aggregate(records, border, res_key):
+def aggregate(records, res_key):
     results = defaultdict(list)
     for r in records:
         results[r["id"]].append(r[res_key])
@@ -24,7 +24,7 @@ def aggregate(records, border, res_key):
         votes_distribution[votes_part] += 1
         data[key].update({
             "mv_{}".format(res_key): res_win,
-            "mv_part": votes_part,
+            "mv_part_{}".format(res_key): votes_part,
             "overlap": overlap
         })
 
@@ -38,10 +38,12 @@ def aggregate(records, border, res_key):
         confidence = proba.loc[key, label]
         confidence_distribution[float(int(confidence * 10) / 10)] += 1
         data[key].update({
-            res_key: label,
-            "confidence": confidence
+            "ds_{}".format(res_key): label,
+            "ds_confidence_{}".format(res_key): confidence
         })
 
+    print()
+    print("Aggregation field:", res_key)
     print("Dawid-Skene: ")
     for confidence, sample_count in sorted(confidence_distribution.items(), reverse=True):
         print("{}: {}".format(confidence, sample_count))
@@ -51,9 +53,7 @@ def aggregate(records, border, res_key):
     for votes, sample_count in sorted(votes_distribution.items(), reverse=True):
         print("{}: {}".format(votes, sample_count))
 
-    data = {key: r for key, r in data.items() if r["confidence"] >= border}
-    data = list(data.values())
-    data.sort(key=lambda x : (x["confidence"], str(x["id"])), reverse=True)
+    data = {key: r for key, r in data.items()}
     return data
 
 
@@ -67,13 +67,11 @@ def write_tsv(records, header, path):
 
 
 def main(
-    border,
     token,
     agg_output,
     raw_output,
     pools_file,
     key_field,
-    res_field,
     input_fields,
 ):
     input_fields = input_fields.split(",")
@@ -91,6 +89,15 @@ def main(
             pool_id = int(pool_id)
             pool_ids.append(pool_id)
 
+    mapping = {
+        "bad": "not_cause",
+        "rel": "not_cause",
+        "same": "not_cause",
+        "left_right_cause": "left_right",
+        "left_right_cancel": "left_right",
+        "right_left_cause": "right_left",
+        "right_left_cancel": "right_left"
+    }
     records = []
     for pool_id in pool_ids:
         for assignment in toloka_client.get_assignments(pool_id=pool_id):
@@ -105,7 +112,8 @@ def main(
                 output_values = solution.output_values
                 record = {
                     key_field: input_values[key_field],
-                    res_field: output_values[res_field],
+                    "result": output_values["result"],
+                    "result_cause": mapping[output_values["result"]],
                     "worker_id": assignment.user_id,
                     "assignment_id": assignment.id
                 }
@@ -113,22 +121,30 @@ def main(
                     record[field] = input_values[field]
                 records.append(record)
 
-    agg_records = aggregate(records, border, res_field)
-    agg_header = []
+    agg_records = aggregate(records, "result")
+    agg_records_cause = aggregate(records, "result_cause")
+    for key, r in agg_records.items():
+        r.update(agg_records_cause[key])
+
+    agg_records = list(agg_records.values())
+    agg_records.sort(key=lambda x : (x["mv_part_result"], str(x["id"])), reverse=True)
+    agg_header = [
+        key_field, "mv_result", "mv_part_result",
+        "ds_result", "ds_confidence_result",
+        "mv_result_cause", "mv_part_result_cause",
+        "ds_result_cause", "ds_confidence_result_cause"
+    ]
     agg_header += input_fields
-    agg_header += [key_field, res_field, "confidence", "overlap", "mv_part", "mv_" + res_field]
     write_tsv(agg_records, agg_header, agg_output)
 
     raw_records = records
-    raw_header = [key_field, res_field, "worker_id", "assignment_id"] + input_fields
+    raw_header = [key_field, "result", "worker_id", "assignment_id"] + input_fields
     write_tsv(raw_records, raw_header, raw_output)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--border", type=float, default=0.0)
     parser.add_argument("--key-field", type=str, default="id")
-    parser.add_argument("--res-field", type=str, default="result")
     parser.add_argument("--input-fields", type=str, required=True)
     parser.add_argument("--token", type=str, default="~/.toloka/token")
     parser.add_argument("--agg-output", type=str, required=True)
