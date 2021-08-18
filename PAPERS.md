@@ -71,3 +71,7 @@
 - https://aclanthology.org/W18-4306.pdf
 - 5 GS citations
 - Построенный краудсорсингом датасет про causal relations между событиями.
+
+### Discovering Event Evolution Graphs From News Corpora
+- 2009
+- https://www.researchgate.net/profile/Congcong-Yang-2/publication/224440212_Discovering_Event_Evolution_Graphs_From_News_Corpora/links/0c960514aff2590cd4000000/Discovering-Event-Evolution-Graphs-From-News-Corpora.pdf
