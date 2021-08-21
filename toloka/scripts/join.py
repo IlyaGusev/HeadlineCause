@@ -20,17 +20,13 @@ def main(markup, docs, output):
             continue
         r["left_timestamp"] = docs[r["left_url"]]["timestamp"]
         r["right_timestamp"] = docs[r["right_url"]]["timestamp"]
-        if "_" not in rid or "single" in rid:
-            rid = "lenta_" + rid
-            r["id"] = rid
-
         if r["mv_result_cause"] == "left_right" and r["left_timestamp"] > r["right_timestamp"]:
             print("Bad timestamps: {}".format(rid))
             continue
         if r["mv_result_cause"] == "right_left" and r["right_timestamp"] > r["left_timestamp"]:
             print("Bad timestamps: {}".format(rid))
             continue
-
+        r["id"] = str(len(fixed_records))
         fixed_records.append(r)
 
     with open(output, "w") as w:
