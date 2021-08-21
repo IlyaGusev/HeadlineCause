@@ -5,6 +5,7 @@ import random
 
 import toloka.client as toloka
 
+from util import get_key
 
 def read_markup(markup_path):
     records = []
@@ -29,7 +30,7 @@ def main(
 ):
     random.seed(seed)
     existing_records = read_markup(existing_markup_path) if existing_markup_path else []
-    existing_keys = {r["id"] for r in existing_records}
+    existing_keys = {get_key(r) for r in existing_records}
 
     honey_records = read_markup(honey_path)
     honeypots = []
@@ -48,7 +49,7 @@ def main(
     input_records = read_markup(input_path)
     tasks = []
     for r in input_records:
-        if r["id"] in existing_keys:
+        if get_key(r) in existing_keys:
             continue
         task = toloka.task.Task(input_values={
             "id": r["id"],
@@ -59,8 +60,10 @@ def main(
         })
         tasks.append(task)
 
+    random.shuffle(honeypots)
     random.shuffle(tasks)
     tasks = tasks[:len(honeypots) * 9]
+    honeypots = honeypots[:len(tasks) // 9]
     tasks.extend(honeypots)
     random.shuffle(tasks)
 

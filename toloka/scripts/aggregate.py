@@ -1,69 +1,63 @@
 import argparse
 import os
+import random
 import csv
 from collections import defaultdict, Counter
 
+import numpy as np
 import pandas as pd
 from crowdkit.aggregation import DawidSkene
 import toloka.client as toloka
+from nltk.metrics.agreement import AnnotationTask
+
+from util import get_key, write_tsv
+
+random.seed(42)
 
 
-def aggregate(records, res_key):
+def aggregate(records, res_key, overlap=10, min_part_alpha=0.7):
     results = defaultdict(list)
     for r in records:
-        results[r["id"]].append(r[res_key])
+        results[get_key(r)].append(r[res_key])
 
-    data = {r["id"]: r for r in records}
+    for key, votes in results.items():
+        random.shuffle(votes)
+        results[key] = votes[:overlap]
+
+    data = {get_key(r): r for r in records}
     confidence_distribution = Counter()
     votes_distribution = Counter()
+    votes = dict()
     for key, res in results.items():
         res_count = Counter(res)
         overlap = len(res)
         res_win, votes_win = res_count.most_common(1)[0]
         votes_part = float(votes_win) / overlap
         votes_distribution[votes_part] += 1
+        votes[key] = votes_part
         data[key].update({
             "mv_{}".format(res_key): res_win,
             "mv_part_{}".format(res_key): votes_part,
             "overlap": overlap
         })
 
-    answers = [(r["id"], r[res_key], r["worker_id"]) for r in records]
-    answers_df = pd.DataFrame(answers, columns=["task", "label", "performer"])
-    proba = DawidSkene(n_iter=20).fit_predict_proba(answers_df)
-    labels = proba.idxmax(axis=1)
-    index = list(proba.index)
-    for key in index:
-        label = labels[key]
-        confidence = proba.loc[key, label]
-        confidence_distribution[float(int(confidence * 10) / 10)] += 1
-        data[key].update({
-            "ds_{}".format(res_key): label,
-            "ds_confidence_{}".format(res_key): confidence
-        })
-
+    answers = [(r["worker_id"], get_key(r), r[res_key]) for r in records]
+    t = AnnotationTask(data=answers)
+    print("Agreement ({}): {}".format(res_key, t.alpha()))
     print()
-    print("Aggregation field:", res_key)
-    print("Dawid-Skene: ")
-    for confidence, sample_count in sorted(confidence_distribution.items(), reverse=True):
-        print("{}: {}".format(confidence, sample_count))
 
+    answers = [(r["worker_id"], get_key(r), r[res_key]) for r in records if votes[get_key(r)] >= min_part_alpha]
+    t = AnnotationTask(data=answers)
+    print("Agreement with border {} ({}): {}".format(min_part_alpha, res_key, t.alpha()))
     print()
-    print("Majority vote: ")
+
+    print("Majority vote ({}): ".format(res_key))
     for votes, sample_count in sorted(votes_distribution.items(), reverse=True):
         print("{}: {}".format(votes, sample_count))
+    print()
 
     data = {key: r for key, r in data.items()}
     return data
-
-
-def write_tsv(records, header, path):
-    with open(path, "w") as w:
-        writer = csv.writer(w, delimiter="\t", quotechar='"')
-        writer.writerow(header)
-        for r in records:
-            row = [r[key] for key in header]
-            writer.writerow(row)
 
 
 def main(
@@ -71,7 +65,6 @@ def main(
     agg_output,
     raw_output,
     pools_file,
-    key_field,
     input_fields,
 ):
     input_fields = input_fields.split(",")
@@ -111,7 +104,7 @@ def main(
                 input_values = task.input_values
                 output_values = solution.output_values
                 record = {
-                    key_field: input_values[key_field],
+                    "id": input_values["id"],
                     "result": output_values["result"],
                     "result_cause": mapping[output_values["result"]],
                     "worker_id": assignment.user_id,
@@ -129,22 +122,19 @@ def main(
     agg_records = list(agg_records.values())
     agg_records.sort(key=lambda x : (x["mv_part_result"], str(x["id"])), reverse=True)
     agg_header = [
-        key_field, "mv_result", "mv_part_result",
-        "ds_result", "ds_confidence_result",
+        "mv_result", "mv_part_result",
         "mv_result_cause", "mv_part_result_cause",
-        "ds_result_cause", "ds_confidence_result_cause"
     ]
     agg_header += input_fields
     write_tsv(agg_records, agg_header, agg_output)
 
     raw_records = records
-    raw_header = [key_field, "result", "worker_id", "assignment_id"] + input_fields
+    raw_header = ["result", "worker_id", "assignment_id"] + input_fields
     write_tsv(raw_records, raw_header, raw_output)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--key-field", type=str, default="id")
     parser.add_argument("--input-fields", type=str, required=True)
     parser.add_argument("--token", type=str, default="~/.toloka/token")
     parser.add_argument("--agg-output", type=str, required=True)
