@@ -1,4 +1,4 @@
-# NewsCause
+# HeadlineCause
 
 - Aggregation markup, final revision, version 1.0: https://www.dropbox.com/s/il3oscmox361p68/news_cause_final_v1.tar.gz
 - All Russian headlines: https://www.dropbox.com/s/1n5l30atzl6goji/ru_docs.jsonl.tar.gz
