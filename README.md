@@ -5,6 +5,6 @@
 - All English headlines: https://www.dropbox.com/s/vw1eida55mxq5wp/en_docs.jsonl.tar.gz
 - Lenta pairs dataset: https://www.dropbox.com/s/g40bjwz2368cttn/dataset.tsv
 - Current Colab notebook: https://colab.research.google.com/drive/1NAnD0OJ0TnYCJRsHpYUyYkjr_yi8ObcA
-- Russian Toloka guideline: https://ilyagusev.github.io/NewsCausation/toloka/project/ru/instruction.html
-- English Toloka guideline: https://ilyagusev.github.io/NewsCausation/toloka/project/en/instruction.html
+- Russian Toloka guideline: https://ilyagusev.github.io/HeadlineCause/toloka/project/ru/instruction.html
+- English Toloka guideline: https://ilyagusev.github.io/HeadlineCause/toloka/project/en/instruction.html
 
