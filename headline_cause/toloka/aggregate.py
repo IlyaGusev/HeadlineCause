@@ -1,18 +1,12 @@
 import argparse
 import os
 import random
-import csv
 from collections import defaultdict, Counter
 
-import numpy as np
-import pandas as pd
-from crowdkit.aggregation import DawidSkene
 import toloka.client as toloka
 from nltk.metrics.agreement import AnnotationTask
 
 from util import get_key, write_tsv
-
-random.seed(42)
 
 
 def aggregate(records, res_key, overlap=10, min_part_alpha=0.7):
@@ -25,7 +19,6 @@ def aggregate(records, res_key, overlap=10, min_part_alpha=0.7):
         results[key] = votes[:overlap]
 
     data = {get_key(r): r for r in records}
-    confidence_distribution = Counter()
     votes_distribution = Counter()
     votes = dict()
     for key, res in results.items():
@@ -41,19 +34,25 @@ def aggregate(records, res_key, overlap=10, min_part_alpha=0.7):
             "overlap": overlap
         })
 
+    print("Aggregation ({}): ".format(res_key))
+    total_samples = sum(votes_distribution.values())
+    sum_agreement = 0
+    for v, sample_count in sorted(votes_distribution.items(), reverse=True):
+        print("{}: {}".format(v, sample_count))
+        sum_agreement += sample_count * v
+    print("Total: ", total_samples)
+    print("Average agreement:", sum_agreement / total_samples)
+
     answers = [(r["worker_id"], get_key(r), r[res_key]) for r in records]
     t = AnnotationTask(data=answers)
-    print("Agreement ({}): {}".format(res_key, t.alpha()))
-    print()
+    print("Krippendorff’s alpha: {}".format(t.alpha()))
 
-    answers = [(r["worker_id"], get_key(r), r[res_key]) for r in records if votes[get_key(r)] >= min_part_alpha]
+    answers = [
+        (r["worker_id"], get_key(r), r[res_key])
+        for r in records if votes[get_key(r)] >= min_part_alpha
+    ]
     t = AnnotationTask(data=answers)
-    print("Agreement with border {} ({}): {}".format(min_part_alpha, res_key, t.alpha()))
-    print()
-
-    print("Majority vote ({}): ".format(res_key))
-    for votes, sample_count in sorted(votes_distribution.items(), reverse=True):
-        print("{}: {}".format(votes, sample_count))
+    print("Krippendorff’s alpha, border {}: {}".format(min_part_alpha, t.alpha()))
     print()
 
     data = {key: r for key, r in data.items()}
@@ -104,7 +103,6 @@ def main(
                 input_values = task.input_values
                 output_values = solution.output_values
                 record = {
-                    "id": input_values["id"],
                     "result": output_values["result"],
                     "result_cause": mapping[output_values["result"]],
                     "worker_id": assignment.user_id,
@@ -120,7 +118,7 @@ def main(
         r.update(agg_records_cause[key])
 
     agg_records = list(agg_records.values())
-    agg_records.sort(key=lambda x : (x["mv_part_result"], str(x["id"])), reverse=True)
+    agg_records.sort(key=lambda x: (x["mv_part_result"], x["left_url"]), reverse=True)
     agg_header = [
         "mv_result", "mv_part_result",
         "mv_result_cause", "mv_part_result_cause",
@@ -135,10 +133,11 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input-fields", type=str, required=True)
+    parser.add_argument("--input-fields", type=str, default="left_title,right_title,left_url,right_url")
     parser.add_argument("--token", type=str, default="~/.toloka/token")
     parser.add_argument("--agg-output", type=str, required=True)
     parser.add_argument("--raw-output", type=str, required=True)
     parser.add_argument("--pools-file", type=str, required=True)
     args = parser.parse_args()
+    random.seed(42)
     main(**vars(args))

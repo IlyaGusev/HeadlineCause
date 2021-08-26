@@ -1,0 +1,4 @@
+[flake8]
+exclude =
+    labse.py
+max-line-length = 120

@@ -1,5 +1,6 @@
 import sys
 import json
+
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
@@ -48,6 +49,7 @@ def main(input_path, output_path):
     with open(output_path, "w") as w:
         for embedding in embeddings:
             w.write(json.dumps(embedding.tolist()) + "\n")
+
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2])

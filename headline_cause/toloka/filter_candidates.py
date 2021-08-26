@@ -1,20 +1,16 @@
 import argparse
 import random
-import sys
 import csv
 import json
-from urllib.parse import urlparse
-from nltk.stem.snowball import SnowballStemmer
-from nltk.metrics.distance import edit_distance
 import spacy
+from nltk.metrics.distance import edit_distance
+
+from util import get_host
 
 
-def get_host(url):
-    return '{uri.scheme}://{uri.netloc}/'.format(uri=urlparse(url))
-
-
-def normalized_entity(text):
-    return "".join(text.lower().replace(".", "").split())
+def normalize_entity(text, spacy_model):
+    text = " ".join([token.lemma_ for token in spacy_model(text)])
+    return text.lower().replace(".", "")
 
 
 def main(
@@ -33,7 +29,7 @@ def main(
     remove_same_locations
 ):
     nlp = spacy.load("en_core_web_sm" if language == "en" else "ru_core_news_sm")
-    bert_labels = [int(l) for l in bert_labels.split(",")]
+    bert_labels = [int(bert_label) for bert_label in bert_labels.split(",")]
     records = []
     with open(input_path, "r") as rf:
         for line in rf:
@@ -65,7 +61,7 @@ def main(
         if len(left_title) < min_length or len(right_title) < min_length:
             continue
         if remove_bad_chars:
-            bad_chars = (";", ":", "!", "?") 
+            bad_chars = (";", ":", "!", "?")
             has_bad_chars = False
             for ch in bad_chars:
                 if ch in left_title or ch in right_title:
@@ -87,11 +83,26 @@ def main(
         if remove_same_locations:
             left_entities = nlp(left_title).ents
             right_entities = nlp(right_title).ents
-            loc_left_entities = [normalized_entity(e.text) for e in left_entities if e.label_ in ("LOC", "GPE")]
-            loc_right_entities = [normalized_entity(e.text) for e in right_entities if e.label_ in ("LOC", "GPE")]
+            loc_left_entities = [e for e in left_entities if e.label_ in ("LOC", "GPE")]
+            loc_right_entities = [e for e in right_entities if e.label_ in ("LOC", "GPE")]
+            loc_left_entities = [normalize_entity(e.text, nlp) for e in loc_left_entities]
+            loc_right_entities = [normalize_entity(e.text, nlp) for e in loc_right_entities]
+            synonyms = {
+                "рф": "россия",
+                "луганск": "лнр",
+                "ставрополье": "ставропольский край",
+                "белоруссия": "беларусь",
+                "кремль": "москва",
+                "краснодар": "краснодарский край",
+                "сша": "америка",
+                "киеве": "украина",
+                "киев": "украина"
+            }
             loc_intersection = set()
             for le in loc_left_entities:
                 for re in loc_right_entities:
+                    le = synonyms.get(le, le)
+                    re = synonyms.get(re, re)
                     if le in re or edit_distance(le, re) < 3:
                         loc_intersection.add(le)
                     elif re in le or edit_distance(le, re) < 3:
@@ -101,7 +112,7 @@ def main(
             print(loc_left_entities, loc_right_entities)
 
         filtered_records.append({
-            "id": "v2_" + str(r["id"]),
+            "id": str(r["id"]),
             "left_title": left_title if rnd else right_title,
             "right_title": right_title if rnd else left_title,
             "left_url": left_url if rnd else right_url,

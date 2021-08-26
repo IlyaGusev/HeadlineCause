@@ -7,6 +7,7 @@ import toloka.client as toloka
 
 from util import get_key
 
+
 def read_markup(markup_path):
     records = []
     with open(markup_path, "r") as r:

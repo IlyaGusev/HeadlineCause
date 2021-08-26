@@ -1,4 +1,6 @@
+import json
 import csv
+from urllib.parse import urlparse
 
 
 def get_key(record):
@@ -25,3 +27,14 @@ def read_tsv(file_name):
     return records
 
 
+def read_jsonl(file_name):
+    records = []
+    with open(file_name, "r") as r:
+        for line in r:
+            record = json.loads(line)
+            records.append(record)
+    return records
+
+
+def get_host(url):
+    return '{uri.scheme}://{uri.netloc}/'.format(uri=urlparse(url))

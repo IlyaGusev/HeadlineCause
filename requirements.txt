@@ -1,0 +1,14 @@
+tensorflow>=2.6.0
+tensorflow-text>=2.6.0
+torch>=1.9.0
+transformers==4.9.2
+spacy==3.1.2
+checklist==0.0.11
+
+networkx==2.6.2
+hnswlib==0.5.2
+catboost==0.26.1
+
+toloka-kit==0.1.10
+crowd-kit==0.0.5
+nltk==3.6.2
