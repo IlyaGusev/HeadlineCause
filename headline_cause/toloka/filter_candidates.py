@@ -5,7 +5,7 @@ import json
 import spacy
 from nltk.metrics.distance import edit_distance
 
-from util import get_host
+from util import get_host, read_jsonl
 
 
 def normalize_entity(text, spacy_model):
@@ -30,11 +30,7 @@ def main(
 ):
     nlp = spacy.load("en_core_web_sm" if language == "en" else "ru_core_news_sm")
     bert_labels = [int(bert_label) for bert_label in bert_labels.split(",")]
-    records = []
-    with open(input_path, "r") as rf:
-        for line in rf:
-            r = json.loads(line)
-            records.append(r)
+    records = read_jsonl(input_path)
 
     filtered_records = []
     for r in records:

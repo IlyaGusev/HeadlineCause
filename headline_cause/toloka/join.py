@@ -1,11 +1,11 @@
 import csv
 import argparse
 
-from util import read_tsv, get_host, read_jsonl
+from util import get_host, read_jsonl, write_jsonl
 
 
 def main(markup, docs, output, language):
-    records = read_tsv(markup)
+    records = read_jsonl(markup)
     docs = {r["url"]: r for r in read_jsonl(docs)}
     fixed_records = []
     bad_ts_count = 0
@@ -27,45 +27,33 @@ def main(markup, docs, output, language):
         right_ts = right_doc["timestamp"]
         r["left_timestamp"] = left_ts
         r["right_timestamp"] = right_ts
-        if r["mv_result_cause"] == "left_right" and left_ts > right_ts:
+        if r["simple_result"] == "left_right" and left_ts > right_ts:
             print("Bad timestamps: {}, {}".format(left_url, right_url))
             bad_ts_count += 1
             continue
-        if r["mv_result_cause"] == "right_left" and right_ts > left_ts:
+        if r["simple_result"] == "right_left" and right_ts > left_ts:
             print("Bad timestamps: {}, {}".format(left_url, right_url))
             bad_ts_count += 1
             continue
         is_lenta = get_host(left_url) == get_host(right_url) == "https://lenta.ru/"
         r["id"] = language + "_" + ("tg_" if not is_lenta else "lenta_") + str(len(fixed_records))
-
         r["has_link"] = int(right_url in left_doc["links"] or left_url in right_doc["links"])
-        r["full_agreement"] = r.pop("mv_part_result")
-        r["full_result"] = r.pop("mv_result")
-        r["simple_agreement"] = r.pop("mv_part_result_cause")
-        r["simple_result"] = r.pop("mv_result_cause")
-        mapping = {
-            "left_right_cancel": "left_right_refute",
-            "right_left_cancel": "right_left_refute"
-        }
-        r["full_result"] = mapping.get(r["full_result"], r["full_result"])
         fixed_records.append(r)
 
     print("Bad url count: {}".format(bad_url_count))
     print("Bad ts count: {}".format(bad_ts_count))
-    with open(output, "w") as w:
-        writer = csv.writer(w, delimiter="\t", quotechar='"')
-        header = (
-            "id", "left_title", "right_title",
-            "left_url", "right_url",
-            "left_timestamp", "right_timestamp",
-            "full_result", "full_agreement",
-            "simple_result", "simple_agreement",
-            "has_link"
-        )
-        writer.writerow(header)
-        for r in fixed_records:
-            writer.writerow([r[key] for key in header])
-
+    header = (
+        "id", "left_title", "right_title",
+        "left_url", "right_url",
+        "left_timestamp", "right_timestamp",
+        "full_result", "full_agreement",
+        "simple_result", "simple_agreement",
+        "full_ds_result", "full_ds_confidence",
+        "simple_ds_result", "simple_ds_confidence",
+        "has_link"
+    )
+    fixed_records = [{key: value for key, value in r.items() if key in header} for r in fixed_records]
+    write_jsonl(fixed_records, output)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

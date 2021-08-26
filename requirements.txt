@@ -5,7 +5,7 @@ transformers==4.9.2
 spacy==3.1.2
 checklist==0.0.11
 
-networkx==2.6.2
+networkx>=2.6.2
 hnswlib==0.5.2
 catboost==0.26.1
 

@@ -1,7 +1,7 @@
 import argparse
 from collections import Counter
 
-from util import read_tsv, read_jsonl, get_host
+from util import read_jsonl, get_host
 
 
 def normalize_entity(text, nlp):
@@ -17,30 +17,30 @@ def main(
     enable_spacy,
     docs_path
 ):
-    agg_records = read_tsv(aggregated_path)
-    raw_records = read_tsv(raw_path)
+    agg_records = read_jsonl(aggregated_path)
+    raw_records = read_jsonl(raw_path)
 
     worker_distribution = Counter()
     for r in raw_records:
         worker_distribution[r["worker_id"]] += 1
 
-    for res_key in ("result_cause", "result"):
+    for res_key in ("simple", "full"):
         votes_distribution = Counter()
         result_distribution = Counter()
         for r in agg_records:
-            votes = r["mv_part_{}".format(res_key)]
-            result = r["mv_{}".format(res_key)]
+            votes = r["{}_agreement".format(res_key)]
+            result = r["{}_result".format(res_key)]
             votes_distribution[votes] += 1
-            mv_part_is_ok = float(votes) >= min_votes_part
-            if mv_part_is_ok:
+            agreement_is_ok = float(votes) >= min_votes_part
+            if agreement_is_ok:
                 result_distribution[result] += 1
 
-        print("MV PART ({})".format(res_key))
+        print("AGREEMENT ({})".format(res_key))
         for votes, count in sorted(votes_distribution.items(), reverse=True):
             print("{}\t{}".format(votes, count))
         print()
 
-        print("RESULT, min MV part ({}), {}".format(res_key, min_votes_part))
+        print("RESULT, min agreement ({}), {}".format(res_key, min_votes_part))
         for result, count in sorted(result_distribution.items()):
             print("{}\t{}".format(count, result))
         print("{}\t{}".format(sum(result_distribution.values()), "all"))
@@ -86,8 +86,8 @@ def main(
         right_ts = right_doc["timestamp"]
         timestamps = lenta_timestamps if is_lenta else tg_timestamps
         timestamps.append(max(left_ts, right_ts))
-        votes = r["mv_part_result_cause"]
-        result = r["mv_result_cause"]
+        votes = r["simple_agreement"]
+        result = r["simple_result"]
         mv_part_is_ok = float(votes) >= min_votes_part
         if result == "left_right" and left_ts > right_ts:
             bad_ts_count += 1
