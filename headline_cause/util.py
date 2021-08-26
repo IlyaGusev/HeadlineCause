@@ -3,10 +3,6 @@ import csv
 from urllib.parse import urlparse
 
 
-def get_key(record):
-    return tuple(sorted((record["left_url"], record["right_url"])))
-
-
 def write_tsv(records, header, path):
     with open(path, "w") as w:
         writer = csv.writer(w, delimiter="\t", quotechar='"')
@@ -44,3 +40,7 @@ def read_jsonl(file_name):
 
 def get_host(url):
     return '{uri.scheme}://{uri.netloc}/'.format(uri=urlparse(url))
+
+
+def get_key(record):
+    return tuple(sorted((record["left_url"], record["right_url"])))

@@ -6,8 +6,9 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
 import tensorflow_text as text
+from scipy.spatial.distance import cosine
 
-from toloka.util import read_jsonl, write_jsonl
+from util import read_jsonl, write_jsonl
 
 
 def normalization(embeds):
