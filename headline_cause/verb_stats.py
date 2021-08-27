@@ -1,6 +1,6 @@
 import argparse
 from collections import defaultdict, Counter
-from util import read_tsv
+from util import read_jsonl
 
 import spacy
 
@@ -83,7 +83,7 @@ def save_gdf(file_name, pairs):
 
 
 def main(markup_path, language):
-    records = read_tsv(markup_path)
+    records = read_jsonl(markup_path)
     results = defaultdict(list)
     for r in records:
         result = r["full_result"]
