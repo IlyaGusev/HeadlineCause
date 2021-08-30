@@ -1,5 +1,5 @@
 # HeadlineCause
-Paper: HeadlineCause: A Dataset of News Headlines forDetecting Casualties
+Paper: HeadlineCause: A Dataset of News Headlines for Detecting Casualties
 
 ## Download
 ### Github:
