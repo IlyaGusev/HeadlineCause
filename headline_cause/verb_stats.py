@@ -6,30 +6,48 @@ import spacy
 
 
 def get_normalized_verbs(s, spacy_model, language):
-    doc = spacy_model(s)
+    doc = spacy_model(s.strip())
     negation_words = {
         "ru": ("не", "передумать", "отменить", "отказаться"),
         "en": ("not", )
     }
     negation_tokens = [tok for tok in doc if tok.dep_ == 'neg' or tok.lemma_ in negation_words[language]]
     negated_tokens = [child.lemma_ for token in negation_tokens for child in token.children]
-    verbs = []
+    root_verbs = []
+    other_verbs = []
     for token in doc:
-        if token.is_stop:
+        if token.pos_ != "VERB":
             continue
-        if token.pos_ == "VERB":
-            if token.lemma_ in negated_tokens:
-                verbs.append(("не_" if language == "ru" else "not_") + token.lemma_)
-            else:
-                verbs.append(token.lemma_)
+        morph = token.morph
+        if "Part" in morph.get("VerbForm") and morph.get("Case"):
+            continue
+        if token.dep_ in ("ROOT", "parataxis"):
+            root_verbs.append(token)
+            continue
+        if token.dep_ in ("xcomp", ):
+            continue
+        other_verbs.append(token)
+    verbs = []
+    for verb in root_verbs:
+        lemma = verb.lemma_
+        if lemma in negated_tokens:
+            lemma = ("не_" if language == "ru" else "not_") + lemma
+        for child in verb.children:
+            if child.dep_ == "xcomp":
+                lemma += "_" + child.lemma_
+        verbs.append(lemma)
     return tuple(verbs)
 
 
 def pairs2verbs(pairs, spacy_model, lang):
-    return tuple([
-        (get_normalized_verbs(s1, spacy_model, lang), get_normalized_verbs(s2, spacy_model, lang))
-        for s1, s2 in pairs
-    ])
+    verbs = []
+    for s1, s2 in pairs:
+        s1_verbs = get_normalized_verbs(s1, spacy_model, lang)
+        s2_verbs = get_normalized_verbs(s2, spacy_model, lang)
+        print(s1_verbs, s1)
+        print(s2_verbs, s2)
+        verbs.append((s1_verbs, s2_verbs))
+    return verbs
 
 
 def verbs2stats(pairs):
