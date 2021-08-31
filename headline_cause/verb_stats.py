@@ -3,38 +3,43 @@ from collections import defaultdict, Counter
 from util import read_jsonl
 
 import spacy
+from spacy.matcher import DependencyMatcher
 
 
-def get_normalized_verbs(s, spacy_model, language):
+def get_normalized_verbs(s, spacy_model, language, print_tokens=False):
+    NEG_WORD = "не" if language == "ru" else "not"
+    SEP = "_"
+
     doc = spacy_model(s.strip())
-    negation_words = {
-        "ru": ("не", "передумать", "отменить", "отказаться"),
-        "en": ("not", )
-    }
-    negation_tokens = [tok for tok in doc if tok.dep_ == 'neg' or tok.lemma_ in negation_words[language]]
-    negated_tokens = [child.lemma_ for token in negation_tokens for child in token.children]
+    if print_tokens:
+        for token in doc:
+            print(token, token.dep_, token.pos_, token.morph, token.head)
+
     root_verbs = []
-    other_verbs = []
     for token in doc:
-        if token.pos_ != "VERB":
+        if token.pos_ not in ("VERB", "AUX"):
             continue
         morph = token.morph
-        if "Part" in morph.get("VerbForm") and morph.get("Case"):
+        if language == "ru" and "Part" in morph.get("VerbForm") and morph.get("Case"):
             continue
-        if token.dep_ in ("ROOT", "parataxis"):
+        if token.dep_ in ("ROOT", "parataxis", "acl"):
             root_verbs.append(token)
-            continue
-        if token.dep_ in ("xcomp", ):
-            continue
-        other_verbs.append(token)
+
     verbs = []
     for verb in root_verbs:
         lemma = verb.lemma_
-        if lemma in negated_tokens:
-            lemma = ("не_" if language == "ru" else "not_") + lemma
+        tokens = [(verb.i, verb.lemma_)]
         for child in verb.children:
-            if child.dep_ == "xcomp":
-                lemma += "_" + child.lemma_
+            if child.text == "-":
+                continue
+            if child.dep_ in ("xcomp", ):
+                tokens.append((child.i, child.lemma_))
+            if language == "ru" and child.dep_ in ("aux", "aux:pass"):
+                tokens.append((child.i, child.lemma_))
+            if child.dep_ == "advmod" and "Neg" in child.morph.get("Polarity"):
+                tokens.append((child.i, NEG_WORD))
+        tokens.sort()
+        lemma = SEP.join([token for _, token in tokens])
         verbs.append(lemma)
     return tuple(verbs)
 
@@ -44,8 +49,6 @@ def pairs2verbs(pairs, spacy_model, lang):
     for s1, s2 in pairs:
         s1_verbs = get_normalized_verbs(s1, spacy_model, lang)
         s2_verbs = get_normalized_verbs(s2, spacy_model, lang)
-        print(s1_verbs, s1)
-        print(s2_verbs, s2)
         verbs.append((s1_verbs, s2_verbs))
     return verbs
 
@@ -94,7 +97,7 @@ def save_gdf(file_name, pairs):
         print('nodedef>name VARCHAR,label VARCHAR,cnt DOUBLE', file=fh)
         for n, c in nodes.items():
             print(f'{n},{n},{c}', file=fh)
-        print('edgedef>node1 VARCHAR,node2 VARCHAR,directed BOOLEAN,label VARCHAR', file=fh)
+        print('edgedef>node1 VARCHAR,node2 VARCHAR,directed BOOLEAN,weight DOUBLE', file=fh)
         for nn, l in edges.items():
             n1, n2 = nn
             print(f'{n1},{n2},true,{l}', file=fh)
@@ -115,7 +118,7 @@ def main(markup_path, language):
             continue
         results[label].append((left_title, right_title))
     verbs = dict()
-    spacy_model = spacy.load("en_core_web_sm" if language == "en" else "ru_core_news_sm")
+    spacy_model = spacy.load("en_core_web_md" if language == "en" else "ru_core_news_md")
     for label, pairs in results.items():
         verbs[label] = pairs2verbs(pairs, spacy_model, language)
         print()
