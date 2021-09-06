@@ -2,11 +2,9 @@
 Paper: HeadlineCause: A Dataset of News Headlines for Detecting Casualties
 
 ## Download
-### Github:
-https://github.com/IlyaGusev/HeadlineCause/releases/tag/v1.0
-
-### Kaggle:
-https://www.kaggle.com/phoenix120/headlinecause
+- HuggingFace: https://huggingface.co/datasets/IlyaGusev/headline_cause
+- Github: https://github.com/IlyaGusev/HeadlineCause/releases/tag/v1.0
+- Kaggle: https://www.kaggle.com/phoenix120/headlinecause
 
 ### Models
 - Simple (3 classes) RU+EN: [headline_cause_simple_en_ru_2.tar.gz](https://www.dropbox.com/s/kd1067r42m8pvaz/headline_cause_simple_en_ru_2.tar.gz)
