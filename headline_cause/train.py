@@ -1,3 +1,4 @@
+import argparse
 import random
 import os
 import json
@@ -8,31 +9,13 @@ from collections import Counter, defaultdict
 import torch
 import numpy as np
 from torch.utils.data import Dataset
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 from transformers import Trainer, TrainingArguments, EarlyStoppingCallback
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+from datasets import load_dataset
 from tqdm import tqdm
 
-
-def set_random_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:2"
-    os.environ["PL_GLOBAL_SEED"] = str(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-
-
-def read_jsonl(file_name, directory="data"):
-    records = []
-    path = os.path.join(directory, file_name)
-    with open(path, "r") as r:
-        for line in r:
-            record = json.loads(line)
-            records.append(record)
-    return records
+from util import set_random_seed, read_jsonl
 
 
 def make_symmetrical(records, prob, task):
@@ -132,125 +115,122 @@ class NewsPairsDataset(Dataset):
             output["labels"] = torch.tensor(label)
         return output
 
+def main(
+    task,
+    out_dir,
+    seed=32,
+    use_augment=True,
+    model_name = "xlm-roberta-large",
+    max_tokens = 60,
+    epochs = 4,
+    eval_steps = 32,
+    warmup_steps = 16,
+    lr = 0.00002,
+    batch_size = 8,
+    grad_accum_steps = 16,
+    patience = 3
+):
+    languages = ("ru", "en")
+    assert task in ("simple", "full")
+    set_random_seed(seed)
 
-set_random_seed(21413)
-ru_train_records = read_jsonl("simple_ru_train.jsonl")
-ru_val_records = read_jsonl("simple_ru_val.jsonl")
-ru_test_records = read_jsonl("simple_ru_test.jsonl")
-ru_records = ru_train_records + ru_val_records + ru_test_records
+    datasets = dict()
+    for lang in languages:
+        dataset = load_dataset("IlyaGusev/headline_cause", "{}_{}".format(lang, task))
+        datasets[lang] = {
+            "train": list(dataset["train"]),
+            "validation": list(dataset["validation"]),
+            "test": list(dataset["test"])
+        }
 
-en_train_records = read_jsonl("simple_en_train.jsonl")
-en_val_records = read_jsonl("simple_en_val.jsonl")
-en_test_records = read_jsonl("simple_en_test.jsonl")
-en_records = en_train_records + en_val_records + en_test_records
+    labels_counter = Counter()
+    for lang in languages:
+        labels_counter += Counter([r["label"] for r in datasets[lang]["train"]])
+    labels_count = len(labels_counter)
 
-ru_full_train_records = read_jsonl("full_ru_train.jsonl")
-ru_full_val_records = read_jsonl("full_ru_val.jsonl")
-ru_full_test_records = read_jsonl("full_ru_test.jsonl")
-ru_full_records = ru_full_train_records + ru_full_val_records + ru_full_test_records
+    if use_augment:
+        for lang in languages:
+            datasets[lang]["train"] = augment(datasets[lang]["train"])
+            datasets[lang]["validation"] = augment(datasets[lang]["validation"])
 
-en_full_train_records = read_jsonl("full_en_train.jsonl")
-en_full_val_records = read_jsonl("full_en_val.jsonl")
-en_full_test_records = read_jsonl("full_en_test.jsonl")
-en_full_records = en_full_train_records + en_full_val_records + en_full_test_records
+    train_records = []
+    val_records = []
+    for lang in languages:
+        print("{}:".format(lang))
+        print(len(datasets[lang]["train"]))
+        print(len(datasets[lang]["validation"]))
+        print(len(datasets[lang]["test"]))
+        for r in datasets[lang]["train"][:2]:
+            print(r)
+        print()
+        train_records += datasets[lang]["train"]
+        val_records += datasets[lang]["validation"]
 
-ru_labels_counter = Counter([r["label"] for r in ru_records])
-print(ru_labels_counter, sum(ru_labels_counter.values()))
-en_labels_counter = Counter([r["label"] for r in en_records])
-print(en_labels_counter, sum(en_labels_counter.values()))
+    random.shuffle(train_records)
 
-ru_labels_counter_full = Counter([r["label"] for r in ru_full_records])
-print(ru_labels_counter_full, sum(ru_labels_counter_full.values()))
-en_labels_counter_full = Counter([r["label"] for r in en_full_records])
-print(en_labels_counter_full, sum(en_labels_counter_full.values()))
+    tokenizer_name = model_name
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, do_lower_case=False)
+    train_data = NewsPairsDataset(train_records, tokenizer, max_tokens)
+    val_data = NewsPairsDataset(val_records, tokenizer, max_tokens)
 
-labels_count = len(ru_labels_counter + en_labels_counter)
-labels_count_full = len(ru_labels_counter_full + en_labels_counter_full)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=labels_count)
+    model = model.to("cuda")
 
-ru_aug_train_records, ru_aug_val_records = augment(ru_train_records), augment(ru_val_records)
-print("RU:")
-print(len(ru_aug_train_records))
-print(len(ru_aug_val_records))
-print(len(ru_test_records))
-for r in ru_aug_train_records[:2]:
-    print(r)
-print()
+    callbacks = [EarlyStoppingCallback(early_stopping_patience=patience)]
 
-en_aug_train_records, en_aug_val_records = augment(en_train_records), augment(en_val_records)
-print("EN:")
-print(len(en_aug_train_records))
-print(len(en_aug_val_records))
-print(len(en_test_records))
-for r in en_aug_train_records[:2]:
-    print(r)
+    training_args = TrainingArguments(
+        output_dir=out_dir,
+        evaluation_strategy="steps",
+        save_strategy="steps",
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size,
+        logging_steps=eval_steps,
+        save_steps=eval_steps,
+        warmup_steps=warmup_steps,
+        learning_rate=lr,
+        num_train_epochs=epochs,
+        gradient_accumulation_steps=grad_accum_steps,
+        report_to="none",
+        load_best_model_at_end=True,
+        save_total_limit=1
+    )
 
-ru_full_aug_train_records, ru_full_aug_val_records = augment(ru_full_train_records, task="full"), augment(ru_full_val_records, task="full")
-print("RU:")
-print(len(ru_full_aug_train_records))
-print(len(ru_full_aug_val_records))
-print(len(ru_full_test_records))
-for r in ru_full_aug_train_records[:2]:
-    print(r)
-print()
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_data,
+        eval_dataset=val_data,
+        callbacks=callbacks
+    )
 
-en_full_aug_train_records, en_full_aug_val_records = augment(en_full_train_records, task="full"), augment(en_full_val_records, task="full")
-print("EN:")
-print(len(en_full_aug_train_records))
-print(max([r["right_timestamp"] for r in en_full_aug_train_records]))
-print(len(en_full_aug_val_records))
-print(max([r["right_timestamp"] for r in en_full_aug_val_records]))
-print(len(en_full_test_records))
-print(max([r["right_timestamp"] for r in en_full_test_records]))
-for r in en_full_aug_train_records[:2]:
-    print(r)
+    trainer.train()
+    model.save_pretrained(out_dir)
+    tokenizer.save_pretrained(out_dir)
 
-MODEL_NAME = "xlm-roberta-large"#@param {type:"string"}
-TOKENIZER_NAME = MODEL_NAME
-MAX_TOKENS = 60#@param {type:"number"}
-EPOCHS = 4#@param {type:"number"}
-EVAL_STEPS = 32#@param {type:"number"}
-WARMUP_STEPS = 16#@param {type:"number"}
-LR = 0.00002#@param {type:"number"}
-BATCH_SIZE = 8#@param {type:"number"}
-GRAD_ACCUM_STEPS = 16#@param {type:"number"}
-PATIENCE = 3#@param {type:"number"}
+    model.eval()
+    pipe = pipeline(
+        "text-classification",
+        model=model,
+        tokenizer=tokenizer,
+        framework="pt",
+        device=0,
+        return_all_scores=True
+    )
 
-train_records = ru_full_aug_train_records + en_full_aug_train_records
-val_records = ru_full_aug_val_records + en_full_aug_val_records
-random.shuffle(train_records)
+    for lang in languages:
+        y_true = np.array([r["label"] for r in datasets[lang]["test"]], dtype=np.int32)
+        test_pairs = [(r["left_title"], r["right_title"]) for r in datasets[lang]["test"]]
+        y_pred, y_pred_prob = pipe_predict(test_pairs, pipe)
+        print("{}:".format(lang))
+        print(classification_report(y_true, y_pred, digits=3))
+        print(confusion_matrix(y_true, y_pred))
+        print("Binary AUC: {}".format(roc_auc_score([int(l == 0) for l in y_true], [p[0] for p in y_pred_prob])))
+        print()
 
-tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME, do_lower_case=False)
-train_data = NewsPairsDataset(train_records, tokenizer, MAX_TOKENS)
-val_data = NewsPairsDataset(val_records, tokenizer, MAX_TOKENS)
 
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=labels_count_full)
-model = model.to("cuda")
-
-callbacks = [EarlyStoppingCallback(early_stopping_patience=PATIENCE)]
-
-training_args = TrainingArguments(
-    output_dir="checkpoints",
-    evaluation_strategy="steps",
-    save_strategy="steps",
-    per_device_train_batch_size=BATCH_SIZE,
-    per_device_eval_batch_size=BATCH_SIZE,
-    logging_steps=EVAL_STEPS,
-    save_steps=EVAL_STEPS,
-    warmup_steps=WARMUP_STEPS,
-    learning_rate=LR,
-    num_train_epochs=EPOCHS,
-    gradient_accumulation_steps=GRAD_ACCUM_STEPS,
-    report_to="none",
-    load_best_model_at_end=True,
-    save_total_limit=1
-)
-
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_data,
-    eval_dataset=val_data,
-    callbacks=callbacks
-)
-
-trainer.train()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--task", type=str, choices=("simple", "full"), required=True)
+    parser.add_argument("--out-dir", type=str, required=True)
+    args = parser.parse_args()
+    main(**vars(args))
