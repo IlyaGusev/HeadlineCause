@@ -1,10 +1,7 @@
 import argparse
-import random
-import os
-import json
 import copy
 import random
-from collections import Counter, defaultdict
+from collections import Counter
 
 import torch
 import numpy as np
@@ -15,73 +12,8 @@ from sklearn.metrics import classification_report, confusion_matrix, roc_auc_sco
 from datasets import load_dataset
 from tqdm import tqdm
 
-from util import set_random_seed, read_jsonl
-
-
-def make_symmetrical(records, prob, task):
-    new_records = []
-    for r in records:
-        new_records.append(r)
-        if random.random() <= prob:
-            new_record = copy.copy(r)
-            new_record["left_url"] = r["right_url"]
-            new_record["right_url"] = r["left_url"]
-            new_record["left_title"] = r["right_title"]
-            new_record["right_title"] = r["left_title"]
-            new_record["left_timestamp"] = r["right_timestamp"]
-            new_record["right_timestamp"] = r["left_timestamp"]
-            if task == "simple":
-                mapping = {
-                    1: 2,
-                    2: 1
-                }
-            else:
-                assert task == "full"
-                mapping = {
-                    3: 4,
-                    4: 3,
-                    5: 6,
-                    6: 5
-                }
-            if r["label"] in mapping:
-                new_record["label"] = mapping[r["label"]]
-            new_record["is_inverted"] = 1
-            new_records.append(new_record)
-    return new_records
-
-
-def checklist_add_typos(string, typos=1):
-    string = list(string)
-    swaps = np.random.choice(len(string) - 1, typos)
-    for swap in swaps:
-        tmp = string[swap]
-        string[swap] = string[swap + 1]
-        string[swap + 1] = tmp
-    return ''.join(string)
-
-
-def add_typos(records, prob):
-    new_records = []
-    for r in records:
-        new_records.append(r)
-        new_r = copy.copy(r)
-        is_added = False
-        if random.random() <= prob:
-            new_r["left_title"] = str(checklist_add_typos(r["left_title"]))
-            is_added = True
-        if random.random() <= prob:
-            new_r["right_title"] = str(checklist_add_typos(r["right_title"]))
-            is_added = True
-        if is_added:
-            new_r["has_misspell"] = 1
-            new_records.append(new_r)
-    return new_records
-
-
-def augment(records, task="simple"):
-    records = make_symmetrical(records, 1.0, task)
-    records = add_typos(records, 0.05)
-    return records
+from augment import augment
+from util import set_random_seed
 
 
 class NewsPairsDataset(Dataset):
@@ -115,20 +47,21 @@ class NewsPairsDataset(Dataset):
             output["labels"] = torch.tensor(label)
         return output
 
+
 def main(
     task,
     out_dir,
-    seed=32,
-    use_augment=True,
-    model_name = "xlm-roberta-large",
-    max_tokens = 60,
-    epochs = 4,
-    eval_steps = 32,
-    warmup_steps = 16,
-    lr = 0.00002,
-    batch_size = 8,
-    grad_accum_steps = 16,
-    patience = 3
+    seed,
+    model_name,
+    max_tokens,
+    epochs,
+    eval_steps,
+    warmup_steps,
+    lr,
+    batch_size,
+    grad_accum_steps,
+    patience,
+    use_augment = True
 ):
     languages = ("ru", "en")
     assert task in ("simple", "full")
@@ -150,8 +83,8 @@ def main(
 
     if use_augment:
         for lang in languages:
-            datasets[lang]["train"] = augment(datasets[lang]["train"])
-            datasets[lang]["validation"] = augment(datasets[lang]["validation"])
+            datasets[lang]["train"] = augment(datasets[lang]["train"], task)
+            datasets[lang]["validation"] = augment(datasets[lang]["validation"], task)
 
     train_records = []
     val_records = []
@@ -174,7 +107,8 @@ def main(
     val_data = NewsPairsDataset(val_records, tokenizer, max_tokens)
 
     model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=labels_count)
-    model = model.to("cuda")
+    if torch.cuda.is_available():
+        model = model.to("cuda")
 
     callbacks = [EarlyStoppingCallback(early_stopping_patience=patience)]
 
@@ -213,7 +147,7 @@ def main(
         model=model,
         tokenizer=tokenizer,
         framework="pt",
-        device=0,
+        device=(0 if torch.cuda.is_available() else -1),
         return_all_scores=True
     )
 
@@ -232,5 +166,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", type=str, choices=("simple", "full"), required=True)
     parser.add_argument("--out-dir", type=str, required=True)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--model-name", type=str, default="xlm-roberta-large")
+    parser.add_argument("--max-tokens", type=int, default=60)
+    parser.add_argument("--epochs", type=int, default=4)
+    parser.add_argument("--eval-steps", type=int, default=32)
+    parser.add_argument("--warmup-steps", type=int, default=16)
+    parser.add_argument("--lr", type=float, default=0.00002)
+    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--grad-accum-steps", type=int, default=16)
+    parser.add_argument("--patience", type=int, default=3)
     args = parser.parse_args()
     main(**vars(args))
