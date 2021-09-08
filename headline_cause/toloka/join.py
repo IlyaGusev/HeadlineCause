@@ -1,4 +1,3 @@
-import csv
 import argparse
 
 from util import get_host, read_jsonl, write_jsonl
@@ -54,6 +53,7 @@ def main(markup, docs, output, language):
     )
     fixed_records = [{key: value for key, value in r.items() if key in header} for r in fixed_records]
     write_jsonl(fixed_records, output)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

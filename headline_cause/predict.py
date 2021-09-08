@@ -22,7 +22,7 @@ def pipe_predict(data, pipe, batch_size=64):
     for batch in tqdm(get_batch(data, batch_size), desc="predict"):
         raw_preds += pipe(batch)
     preds = np.array([int(max(labels, key=lambda x: x["score"])["label"][-1]) for labels in raw_preds])
-    pp = np.array([[l["score"] for l in labels] for labels in raw_preds])
+    pp = np.array([[label["score"] for label in labels] for labels in raw_preds])
     return preds, pp
 
 

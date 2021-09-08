@@ -68,5 +68,3 @@ def augment(records, task="simple"):
     records = make_symmetrical(records, 1.0, task)
     records = add_typos(records, 0.05)
     return records
-
-

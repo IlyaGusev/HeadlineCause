@@ -47,7 +47,6 @@ def aggregate(records, res_key, overlap=10, min_agreement=0.7):
     answers_df = pd.DataFrame(answers, columns=["task", "label", "performer"])
     proba = DawidSkene(n_iter=20).fit_predict_proba(answers_df)
     labels = proba.idxmax(axis=1)
-    index = list(proba.index)
     for key in data:
         ds_key = str(hash(key))
         label = labels[ds_key]

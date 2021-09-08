@@ -1,4 +1,5 @@
 [flake8]
 exclude =
-    labse.py
+    headline_cause/labse_pairs.py
+    headline_cause/labse.py
 max-line-length = 120

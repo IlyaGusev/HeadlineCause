@@ -1,5 +1,4 @@
 import sys
-import json
 
 from tqdm import tqdm
 import numpy as np

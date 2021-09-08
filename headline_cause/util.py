@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 import torch
 import numpy as np
 
+
 def write_tsv(records, header, path):
     with open(path, "w") as w:
         writer = csv.writer(w, delimiter="\t", quotechar='"')

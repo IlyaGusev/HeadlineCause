@@ -1,7 +1,6 @@
 import argparse
 import random
 import csv
-import json
 import spacy
 from nltk.metrics.distance import edit_distance
 

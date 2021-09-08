@@ -3,7 +3,6 @@ from collections import defaultdict, Counter
 from util import read_jsonl
 
 import spacy
-from spacy.matcher import DependencyMatcher
 
 
 def get_normalized_verbs(s, spacy_model, language, print_tokens=False):

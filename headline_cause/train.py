@@ -1,5 +1,4 @@
 import argparse
-import copy
 import random
 from collections import Counter
 
@@ -10,11 +9,11 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipe
 from transformers import Trainer, TrainingArguments, EarlyStoppingCallback
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
 from datasets import load_dataset
-from tqdm import tqdm
 
 from augment import augment
 from util import set_random_seed
 from predict import pipe_predict
+
 
 class NewsPairsDataset(Dataset):
     def __init__(self, records, tokenizer, max_tokens):
@@ -61,7 +60,7 @@ def main(
     batch_size,
     grad_accum_steps,
     patience,
-    use_augment = True
+    use_augment=True
 ):
     languages = ("ru", "en")
     assert task in ("simple", "full")
@@ -158,7 +157,9 @@ def main(
         print("{}:".format(lang))
         print(classification_report(y_true, y_pred, digits=3))
         print(confusion_matrix(y_true, y_pred))
-        print("Binary AUC: {}".format(roc_auc_score([int(l == 0) for l in y_true], [p[0] for p in y_pred_prob])))
+        binary_y_true = [int(label == 0) for label in y_true]
+        binary_y_pred = [p[0] for p in y_pred_prob]
+        print("Binary AUC: {}".format(roc_auc_score(binary_y_true, binary_y_pred)))
         print()
 
 
