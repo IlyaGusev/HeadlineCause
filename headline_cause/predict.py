@@ -2,9 +2,10 @@ import argparse
 
 import torch
 from tqdm import tqdm
-from transformers import AutoModel, AutoTokenizer, pipeline
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+import numpy as np
 
-from util import read_jsonl
+from util import read_jsonl, write_jsonl
 
 
 def get_batch(data, batch_size):
@@ -26,7 +27,7 @@ def pipe_predict(data, pipe, batch_size=64):
 
 
 def predict(model_path, input_path, output_path):
-    model = AutoModel.from_pretrained(model_path)
+    model = AutoModelForSequenceClassification.from_pretrained(model_path)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model.eval()
     pipe = pipeline(
@@ -41,8 +42,8 @@ def predict(model_path, input_path, output_path):
     test_pairs = [(r["left_title"], r["right_title"]) for r in data]
     labels, probs = pipe_predict(test_pairs, pipe)
     for r, l, p in zip(data, labels, probs):
-        r["pred_label"] = l
-        r["pred_prob"] = p[l]
+        r["pred_label"] = int(l)
+        r["pred_prob"] = float(p[l])
     write_jsonl(data, output_path)
 
 
