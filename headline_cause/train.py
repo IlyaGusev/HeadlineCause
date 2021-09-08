@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from augment import augment
 from util import set_random_seed
-
+from predict import pipe_predict
 
 class NewsPairsDataset(Dataset):
     def __init__(self, records, tokenizer, max_tokens):
