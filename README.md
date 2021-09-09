@@ -7,7 +7,7 @@ Paper: HeadlineCause: A Dataset of News Headlines for Detecting Casualties
 - Kaggle: https://www.kaggle.com/phoenix120/headlinecause
 
 ### Models
-- Simple (3 classes) RU+EN: [headline_cause_simple_en_ru_2.tar.gz](https://www.dropbox.com/s/kd1067r42m8pvaz/headline_cause_simple_en_ru_2.tar.gz)
+- Simple (3 classes) RU+EN: [xlm_roberta_large_headline_cause_simple](https://huggingface.co/IlyaGusev/xlm_roberta_large_headline_cause_simple)
 - Full (7 classes) RU+EN: [headline_cause_full_en_ru_2.tar.gz](https://www.dropbox.com/s/74q68tdlztvnc7k/headline_cause_full_en_ru_2.tar.gz)
 
 ### Notebooks
