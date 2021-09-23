@@ -1,5 +1,5 @@
 # HeadlineCause
-Paper: HeadlineCause: A Dataset of News Headlines for Detecting Casualties
+Paper: HeadlineCause: A Dataset of News Headlines for Detecting Causalties
 
 ## Download
 - HuggingFace: https://huggingface.co/datasets/IlyaGusev/headline_cause
