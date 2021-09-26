@@ -16,7 +16,7 @@ def unquote(title):
     else:
         fixed_title = title
     fixed_title = fixed_title.replace('""', '"')
-    return title
+    return fixed_title
 
 
 def aggregate(records, res_key, overlap=10, min_agreement=0.7):
