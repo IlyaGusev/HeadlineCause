@@ -1,5 +1,6 @@
 # HeadlineCause
-Paper: HeadlineCause: A Dataset of News Headlines for Detecting Causalities
+* Arxiv paper: [HeadlineCause: A Dataset of News Headlines for Detecting Causalities](https://arxiv.org/abs/2108.12626)
+* OpenReview discussion: [HeadlineCause: A Dataset of News Headlines for Detecting Causalities](https://openreview.net/forum?id=ipRfG6Y9jJS)
 
 ## Download
 - HuggingFace: https://huggingface.co/datasets/IlyaGusev/headline_cause
