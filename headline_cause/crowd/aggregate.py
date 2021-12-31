@@ -7,7 +7,8 @@ from nltk.metrics.agreement import AnnotationTask
 from crowdkit.aggregation import DawidSkene
 import pandas as pd
 
-from util import get_key, write_jsonl
+from util import write_jsonl
+from crowd.util import get_pool, get_key
 
 
 def unquote(title):
@@ -119,29 +120,15 @@ def main(
     }
     records = []
     for pool_id in pool_ids:
-        for assignment in toloka_client.get_assignments(pool_id=pool_id):
-            solutions = assignment.solutions
-            if not solutions:
-                continue
-            for task, solution in zip(assignment.tasks, solutions):
-                known_solutions = task.known_solutions
-                if known_solutions is not None:
-                    continue
-                input_values = task.input_values
-                output_values = solution.output_values
-                result = output_values["result"]
-                result = results_mapping.get(result, result)
-                record = {
-                    "full_result": result,
-                    "simple_result": simple_mapping[result],
-                    "worker_id": assignment.user_id,
-                    "assignment_id": assignment.id
-                }
-                for field in input_fields:
-                    record[field] = input_values[field]
-                record["left_title"] = unquote(record["left_title"])
-                record["right_title"] = unquote(record["right_title"])
-                records.append(record)
+        pool = get_pool(pool_id, toloka_client)
+        for r in pool:
+            result = r.pop("result")
+            result = results_mapping.get(result, result)
+            r["full_result"] = result
+            r["simple_result"] = simple_mapping[result]
+            r["left_title"] = unquote(r["left_title"])
+            r["right_title"] = unquote(r["right_title"])
+        records.extend(pool)
 
     agg_records = aggregate(records, "full")
     agg_records_simple = aggregate(records, "simple")

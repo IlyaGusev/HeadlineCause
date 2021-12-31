@@ -5,19 +5,8 @@ import random
 
 import toloka.client as toloka
 
-from util import get_key
-
-
-def read_markup(markup_path):
-    records = []
-    with open(markup_path, "r") as r:
-        header = next(r).strip().split("\t")
-        header = [f.split(":")[-1] for f in header]
-        for line in r:
-            fields = line.strip().split("\t")
-            record = dict(zip(header, fields))
-            records.append(record)
-    return records
+from util import read_jsonl
+from crowd.util import get_key, read_markup
 
 
 def main(
@@ -27,10 +16,11 @@ def main(
     existing_markup_path,
     honey_path,
     template_pool_id,
+    overlap,
     page_size
 ):
     random.seed(seed)
-    existing_records = read_markup(existing_markup_path) if existing_markup_path else []
+    existing_records = read_jsonl(existing_markup_path) if existing_markup_path else []
     existing_keys = {get_key(r) for r in existing_records}
 
     honey_records = read_markup(honey_path)
@@ -47,7 +37,9 @@ def main(
         }}])
         honeypots.append(task)
 
-    input_records = read_markup(input_path)
+    input_records = read_jsonl(input_path)
+    input_records = {get_key(r): r for r in input_records}
+    input_records = list(input_records.values())
     tasks = []
     for r in input_records:
         if get_key(r) in existing_keys:
@@ -63,8 +55,11 @@ def main(
 
     random.shuffle(honeypots)
     random.shuffle(tasks)
-    tasks = tasks[:len(honeypots) * 9]
-    honeypots = honeypots[:len(tasks) // 9]
+    target_honeypots_count = len(tasks) // 9
+    full_honeypots = honeypots[:target_honeypots_count]
+    while len(full_honeypots) < target_honeypots_count:
+        full_honeypots += honeypots
+    honeypots = full_honeypots[:target_honeypots_count]
     tasks.extend(honeypots)
     random.shuffle(tasks)
 
@@ -84,7 +79,7 @@ def main(
         ts = toloka.task_suite.TaskSuite(
             pool_id=pool.id,
             tasks=task_suite,
-            overlap=10
+            overlap=overlap
         )
         task_suites.append(ts)
         start_index += page_size
@@ -102,5 +97,6 @@ if __name__ == "__main__":
     parser.add_argument("--honey-path", type=str, required=True)
     parser.add_argument("--template-pool-id", type=int, required=True)
     parser.add_argument("--page-size", type=int, default=10)
+    parser.add_argument("--overlap", type=int, default=10)
     args = parser.parse_args()
     main(**vars(args))

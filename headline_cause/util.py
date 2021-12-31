@@ -47,10 +47,6 @@ def get_host(url):
     return '{uri.scheme}://{uri.netloc}/'.format(uri=urlparse(url))
 
 
-def get_key(record):
-    return tuple(sorted((record["left_url"], record["right_url"])))
-
-
 def set_random_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -61,3 +57,13 @@ def set_random_seed(seed):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
+
+
+def gen_batch(records, batch_size):
+    batch_start = 0
+    while batch_start < len(records):
+        batch_end = batch_start + batch_size
+        batch = records[batch_start: batch_end]
+        batch_start = batch_end
+        yield batch
+
