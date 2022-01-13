@@ -10,6 +10,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 from util import write_jsonl, read_jsonl, gen_batch
 
+
 def main(
     input_path,
     model_path,
@@ -80,5 +81,3 @@ if __name__ == "__main__":
     parser.add_argument("--max-tokens", type=int, default=60)
     args = parser.parse_args()
     main(**vars(args))
-
-

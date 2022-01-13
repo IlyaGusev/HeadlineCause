@@ -18,7 +18,8 @@ def main(
     batch_size = 8
     docs = read_jsonl(input_path)
     docs.sort(key=lambda x: x["timestamp"])
-    docs = docs[-ndocs:]
+    if ndocs is not None:
+        docs = docs[-ndocs:]
     with open(output_path, "w") as w:
         for batch in tqdm(gen_batch(docs, batch_size)):
             titles = [r["title"] for r in batch]
@@ -32,7 +33,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-path', type=str, required=True)
     parser.add_argument('--output-path', type=str, required=True)
-    parser.add_argument('--ndocs', type=int, required=True)
+    parser.add_argument('--ndocs', type=int, default=None)
     parser.add_argument('--batch_size', type=int, default=8)
     args = parser.parse_args()
     main(**vars(args))
