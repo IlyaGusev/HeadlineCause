@@ -42,12 +42,12 @@ def main(
         print("Using RECS...")
         docs = {d["url"]: d for d in read_jsonl(docs_path)}
         filtered_records = list()
-        initial_threshold = 0.85
-        threshold_step = (initial_threshold - 0.7) / nrows
+        initial_threshold = 1.0
+        threshold_step = (initial_threshold - 0.7) / (nrows * 1.5)
         threshold = initial_threshold
         for r in tqdm(records):
-            d1 = docs[r["url1"]]
-            d2 = docs[r["url2"]]
+            d1 = docs[r["left_url"]]
+            d2 = docs[r["right_url"]]
             embedding1 = d1[embedding_key] + d2[embedding_key]
             r["embedding"] = embedding1
             max_sim = 0.0
@@ -58,6 +58,8 @@ def main(
             if max_sim < threshold:
                 filtered_records.append(r)
                 threshold -= threshold_step
+                if len(filtered_records) == nrows:
+                    break
         records = [r for r in filtered_records]
         for r in records:
             r.pop("embedding")
@@ -66,7 +68,7 @@ def main(
     records = records[:nrows]
 
     print("Writing results...")
-    write_jsonl(output_path, records)
+    write_jsonl(records, output_path)
 
 
 if __name__ == "__main__":

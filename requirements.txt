@@ -8,6 +8,7 @@ checklist==0.0.11
 
 networkx>=2.6.2
 hnswlib==0.5.2
+annoy==1.17.0
 catboost==0.26.1
 
 toloka-kit==0.1.10

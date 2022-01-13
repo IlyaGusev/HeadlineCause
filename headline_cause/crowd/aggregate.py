@@ -31,11 +31,13 @@ def aggregate(records, res_key, overlap=10, min_agreement=0.7):
 
     data = {get_key(r): r for r in records}
     votes_distribution = Counter()
+    res_distribution = Counter()
     votes = dict()
     for key, res in results.items():
         res_count = Counter(res)
         overlap = len(res)
         res_win, votes_win = res_count.most_common(1)[0]
+        res_distribution[res_win] += 1
         votes_part = float(votes_win) / overlap
         votes_distribution[votes_part] += 1
         votes[key] = votes_part
@@ -65,6 +67,9 @@ def aggregate(records, res_key, overlap=10, min_agreement=0.7):
         sum_agreement += sample_count * v
     print("Total: ", total_samples)
     print("Average agreement:", sum_agreement / total_samples)
+    print("Results ({}): ".format(res_key))
+    for res, cnt in res_distribution.items():
+        print("{}: {}".format(res, cnt))
 
     answers = [(r["worker_id"], get_key(r), r[res_key + "_result"]) for r in records]
     t = AnnotationTask(data=answers)

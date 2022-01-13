@@ -14,8 +14,9 @@ def make_symmetrical(records, prob, task):
             new_record["right_url"] = r["left_url"]
             new_record["left_title"] = r["right_title"]
             new_record["right_title"] = r["left_title"]
-            new_record["left_timestamp"] = r["right_timestamp"]
-            new_record["right_timestamp"] = r["left_timestamp"]
+            if "left_timestamp" in r:
+                new_record["left_timestamp"] = r["right_timestamp"]
+                new_record["right_timestamp"] = r["left_timestamp"]
             if task == "simple":
                 mapping = {
                     1: 2,
